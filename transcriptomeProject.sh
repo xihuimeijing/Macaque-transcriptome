@@ -154,22 +154,15 @@
 	##2.4 CAGE-seq data processing and supporting information for newly-defined gene models
 		###2.4.1 CAGE-seq data processing
 		cd /rd1/brick/lisx/pacbio/cage/GR-data/repeat/
-bash run1-cage-GRrawdata.sh
-
-		
-bash run2_GRctss.sh
-
-		
-cd /rd1/brick/lisx/pacbio/cage/FANTOM5/data
-bash run_FANTOM5ctss.sh
-
+		bash run1-cage-GRrawdata.sh
+		bash run2_GRctss.sh		
+		cd /rd1/brick/lisx/pacbio/cage/FANTOM5/data
+		bash run_FANTOM5ctss.sh
 		###2.4.2 CAGE-seq supporting informations			
 		do cd /rd1/brick/lisx/pacbio/annotation/transcript-cage-${tissue}
- bash run-cage.sh
- done
-			
-	##2.5 Merge transcripts from 4 tissues to get the final gene models
-		
+ 			bash run-cage.sh
+		done
+				
 #3 Gene name assignment (liym@jupiter ~/transcriptome/visualization/geneNameAssign)
 	awk '$1!~"Single"' /mnt/share/shenq/forYM/20180702/Final.upgradedMerge2.cds.cageLevel.gpe |genePredToGtf -utr -source=monkeyGene file stdin Final.upgradedMerge2.cds.cageLevel.gtf 
 	awk '$1~"Single.level"' /mnt/share/shenq/forYM/20180702/Final.upgradedMerge2.cds.cageLevel.gpe|gpe2bed.pl -t 6 >Final.upgradedMerge2.cds.cageLevel.single.bed6 
