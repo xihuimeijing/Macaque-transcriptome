@@ -224,7 +224,7 @@
 	RefSeq_M=/rd1/user/liym/transcriptome/data/rheMac8.refGene.20190613.gpe
 	GENCODE_H=/rd1/user/liym/transcriptome/data/gencode.v19.annotation.genename.gpe
 	newlyDefined_M=/rd1/user/liym/transcriptome/visualization/Final.426909.withName.gpe
-	##3.1 Comparisons with annotations in human dan macaque (Fig1d,e,f)		
+	##4.1 Comparisons with annotations in human dan macaque (Fig1d,e,f)		
 		###directory:/rd1/brick/lisx/pacbio/evaluation/Evalu-overlap/
 		###with human GENCODE
 		liftOver -genePred $newlyDefined_M /share/data/liftover/rheMac8/rheMac8ToHg19.over.chain.gz rheMac8ToHg19.bgm.gpe unmapped.rheMac8ToHg19
@@ -241,7 +241,7 @@
 		genePredToGtf file $Ensembl_M rheMac8.ensGene.gtf
 		cuffcompare -r rheMac8.ensGene.gtf -o cuffcompare_ens rheMac8.bgm.gtf
 		less -S cuffcompare/cuffcompare_ens.tracking |awk '{if (($4=="c") || ($4=="j") || ($4=="=") )print $0}'|cut -f 3,5|sed 's/|/\t/g'|sed 's/:/\t/g'|cut -f 1,2,4,5|sort|uniq > overlap.ensBgm
-	##3.2 TSS evaluation
+	##4.2 TSS evaluation
 		###3.2.1 H3K4me3 data processing (liym@pluto /rd1/user/liym/transcriptome/ChIP-seq; Fig2a)
 		perlScript_ym=/rd1/brick/liym/bin
 		mv SRR068550.sra brain_pfc.SRR068550.sra
@@ -291,7 +291,7 @@
 		cut -f 2-5 cpgIslandExt.txt >CpG.bed4
 		cat $newlyDefined_M|perl -lane '$a[0]=$F[1];if ($F[2] eq "+"){$a[1]=$F[3];$a[2]=$F[3]+1;} else {$a[1]=$F[4]-1;$a[2]=$F[4];} $a[3]=$F[0];$a[4]=$F[7];$a[5]=$F[2];print join "\t",@a;'|sort -k1,1 -k2,2n|bedtools closest -D "a" -t "first" -a - -b <(sort -k1,1 -k2,2n CpG.bed4) > dis2cpg.all
 		cat $Ensembl_M |cut -f 2-|perl -lane '$a[0]=$F[1];if ($F[2] eq "+"){$a[1]=$F[3];$a[2]=$F[3]+1;} else {$a[1]=$F[4]-1;$a[2]=$F[4];} $a[3]=$F[0];$a[4]=$F[7];$a[5]=$F[2];print join "\t",@a;'|sort -k1,1 -k2,2n|bedtools closest -D "a" -t "first" -a - -b <(sort -k1,1 -k2,2n CpG.bed4) > dis2cpg.ensgene
-	##3.3 TTS evaluation (liym@jupiter ~/transcriptome/evaluation/polyASeq; Fig2c)
+	##4.3 TTS evaluation (liym@jupiter ~/transcriptome/evaluation/polyASeq; Fig2c)
 		#download UTL:wget http://hgdownload.soe.ucsc.edu/gbdb/rheMac2/bbi/polyASeqSites*Fwd.bw 
 					 #wget http://hgdownload.soe.ucsc.edu/gbdb/rheMac2/bbi/polyASeqSites*Rev.bw
 		cat rawBW/*Fwd.bw.bg |perl -lane '$n++;$F[4]=$F[3];$F[3]="PolyA_".$n;$F[5]="+";print join "\t",@F;' > polyA.rheMac2.bed6 
@@ -300,12 +300,12 @@
 		cat $newlyDefined_M|perl -lane '$a[0]=$F[1];if ($F[2] eq "+"){$a[1]=$F[4]-1;$a[2]=$F[4];} else {$a[1]=$F[3];$a[2]=$F[3]+1;} $a[3]=$F[0];$a[4]=$F[7];$a[5]=$F[2];print join "\t",@a;'|sort -k1,1 -k2,2n|bedtools closest -s -D "a" -t "first" -a - -b <(sort -k1,1 -k2,2n GSE30198.rheMac8.polyASeq.bed6)  >dis2polya.all
 		cat $Ensembl_M|perl -lane '$a[0]=$F[1];if ($F[2] eq "+"){$a[1]=$F[4]-1;$a[2]=$F[4];} else {$a[1]=$F[3];$a[2]=$F[3]+1;} $a[3]=$F[0];$a[4]=$F[7];$a[5]=$F[2];print join "\t",@a;'|sort -k1,1 -k2,2n|bedtools closest -s -D "a" -t "first" -a - -b <(sort -k1,1 -k2,2n GSE30198.rheMac8.polyASeq.bed6) >dis2polya.ensgene
 		cat <(awk -v OFS="\t" '{print $13,"Newly-defined"}' dis2polya.all) <(awk -v OFS="\t" '{print $13,"Ensembl"}' dis2polya.ensgene) >dis2ploya.inhouse.ensembl
-	##3.4 Splice site evaluation (liym@jupiter ~/transcriptome/evaluation/ss_motif;Fig2d)
+	##4.4 Splice site evaluation (liym@jupiter ~/transcriptome/evaluation/ss_motif;Fig2d)
 		perl ~/bin/gpeFeature.pl -i ~/transcriptome/visualization/Final.426909.withName.gpe|awk -v OFS="\t" '{if($6=="+"){print $1,$2-3,$2+6,$4,$5,$6}else{print $1,$3-6,$3+3,$4,$5,$6}}' | fastaFromBed -name -s -fi ~/data/genome/rheMac8/rheMac8.fa -bed stdin -fo stdout|grep -v "^>" - >Final.426909.5SS.motif
 		perl ~/bin/gpeFeature.pl -i ~/transcriptome/visualization/Final.426909.withName.gpe|awk -v OFS="\t" '{if($6=="+"){print $1,$3-20,$3+3,$4,$5,$6}else{print $1,$2-3,$2+20,$4,$5,$6}}' | fastaFromBed -name -s -fi ~/data/genome/rheMac8/rheMac8.fa -bed stdin -fo stdout|grep -v "^>" - >Final.426909.3SS.motif
 		python /mnt/share/liym/tools/weblogo-master/weblogo -f Final.426909.5SS.motif -o 5ss.weblogo.pdf -F pdf -A dna -t "5ss" --number-interval 1 --fineprint "" --errorbars False -C green A 'Adenine' -C orange G 'guanine' -C red T 'Thymine' -C blue C 'Cytosine'
 		bin/python /mnt/share/liym/tools/weblogo-master/weblogo -f Final.426909.3SS.motif -o 3ss.weblogo.pdf -F pdf -A dna -t "3ss" --number-interval 1 --fineprint "" --errorbars False -C green A 'Adenine' -C orange G 'guanine' -C red T 'Thymine' -C blue C 'Cytosine'
-	##3.5 Protein sequence covergae (lixs@pluto:/rd1/brick/lisx/pacbio/NCBI_inputdata/protein-ORF/; Fig2e)
+	##4.5 Protein sequence covergae (lixs@pluto:/rd1/brick/lisx/pacbio/NCBI_inputdata/protein-ORF/; Fig2e)
 		perlScript_lsx=/rd1/brick/lisx/scripts
 		perl $perlScript_lsx/bin-mergeValue.pl -f <(perl /rd1/brick/lisx/scripts/gpe-utr-cds-length.pl -f1 hg19.refGene.20190613.gpe |cut -f 1,14|sed 's/:/\t/g'|awk '{if ($2!=$5)print $5"\t"$2 }' ) |sed 's/,/\t/g'|awk '{a=$2;for (i=2;i<=NF;i++){if (a<$i){a=$i}};print $1"\t"a  }' > hg19.cdslength
 		perl $perlScript_lsx/bin-mergeValue.pl -f <(perl /rd1/brick/lisx/scripts/gpe-utr-cds-length.pl -f1 <(awk '{if ($6!=$7){print "0\t"$0}}' rheMac8.bgm.gpe )|cut -f 1,14|sed 's/:/\t/g'|awk '{print $5"\t"$2 }')|sed 's/,/\t/g'|awk '{a=$2;for (i=2;i<=NF;i++){if (a<$i){a=$i}};print $1"\t"a  }'  > rheMac8.cdslength
@@ -318,13 +318,13 @@
 		bash run-blRes-CovIden.sh all 75 
 		bash run-blCovIden-statistic.sh all.iden75.Topres
 		bash run-finalfigure75.sh
-	##3.6 CDS comparisions with human CDS(lisx@pluto:/rd1/brick/lisx/pacbio/evaluation/cds/)
-		###3.6.1 CDS length comparison with human refSeq annotations (Fig2f)
+	##4.6 CDS comparisions with human CDS(lisx@pluto:/rd1/brick/lisx/pacbio/evaluation/cds/)
+		###4.6.1 CDS length comparison with human refSeq annotations (Fig2f)
 			perl $perlScript_lsx/bin-mergeValue.pl -f <(perl ${perlPath}/gpe-utr-cds-length.pl -f1 <(awk '{print $0}' /share/data/structure/gpe/hg19.refGene.gpe ) |cut -f 1,14|sed 's/:/\t/g'|awk '{if ($2!=$5)print $5"\t"$2 }' ) |sed 's/,/\t/g'|awk '{a=$2;for (i=2;i<=NF;i++){if (a<$i){a=$i}};print $1"\t"a  }' > hg19.cdslength
 			perl $perlScript_lsx/bin-mergeValue.pl -f <(perl ${perlPath}/gpe-utr-cds-length.pl -f1 <(awk '{if ($6!=$7){print "0\t"$0}}' rheMac8.bgm.gpe )|cut -f 1,14|sed 's/:/\t/g'|awk '{print $5"\t"$2 }')|sed 's/,/\t/g'|awk '{a=$2;for (i=2;i<=NF;i++){if (a<$i){a=$i}};print $1"\t"a  }'  > rheMac8.cdslength
 			perl $perlScript_lsx/comm_file1_file2.pl -f1 hg19.cdslength -f2 rheMac8.cdslength -n 1 -e1 1 -e2 1 |cut -f 1,2,4 > hg19RheMac8.cdslength
 			perl $perlScript_lsx/bin_value.pl -f <(less -S hg19RheMac8.cdslength |awk '{print $1"\t"($3-$2)/$2+0.05}' ) -value 2 -n 40 -max 3 -min -1 -equal max -outbin min~max -outnumber percent|awk '{a=a+$2;print $0"\t"a}'> rhe-hg.box
-		###3.6.2 Coverage proportation and identity (Fig2g,h)
+		###4.6.2 Coverage proportation and identity (Fig2g,h)
 			cd AAcompare/
 			### get the homologous genes of human and macaque
 			perl $perlScript_lsx/comm_file1_file2.pl -f1 <(less -S ../hg19RheMac8.cdslength |cut -f 1 ) -f2 <(less -S /share/data/structure/gpe/hg19.refGene.gpe |awk '{print $13"\t"$0}') -n 1 -e1 0 -e2 20|cut -f 4- > hg19.refHomo.gpe
