@@ -368,17 +368,18 @@
 
 #5 PA identification and evaluation(liym@jupiter ~/transcriptome/PA)
 	##5.1 PA usage on genes in human and macaque tissues 
+		cd ~/transcriptome/PA
 		ls ../hg19PacBio/*bed12+|grep -v "hCere"|while read file;do
 			tissue=$(basename $file|sed 's/.processed.sky.bed12+//');
 			sh ~/transcriptome/scripts/PAratio.OnGenes.sh -g ~/transcriptome/data/gencode.v19.annotation.genename.gpe -r $file -o $tissue &
 		done;
 		ls /mnt/share/liym/transcriptome/pacBioData/rheMac8/*pass1.bed12+|while read file;do
 			tissue=$(basename $file|cut -f1 -d '.');
-			sh ~/transcriptome/scripts/PAratio.OnGenes.sh -g ~/transcriptome/visualization/Final.426909.withName.gpe -r $file -o $tissue &
+			sh ~/transcriptome/scripts/PAratio.OnGenes.sh -g ~/transcriptome/visualization/geneNameAssign/version_all_2020/Final.427404.withName.gpe -r $file -o $tissue &
 		done;
 		ls */PA.onGene.tsv |while read file;do
 			prefix=$(dirname $file);  
-        	 -v OFS="\t" '{split($4,a,",");split($5,readN,",");split($6,usage,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3,readN[i],$2,usage[i]}}' $file >${prefix}.PAusage.bed6+;
+        	 	awk -v OFS="\t" '{split($4,a,",");split($5,readN,",");split($6,usage,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3,readN[i],$2,usage[i]}}' $file >${prefix}.PAusage.bed6+;
         done;
 	##5.2 PA evaluation in macaque tissues
 		mkdir evaluation & cd evaluation
