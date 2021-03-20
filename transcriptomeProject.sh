@@ -225,7 +225,7 @@
 	GENCODE_H=/rd1/user/liym/transcriptome/data/gencode.v19.annotation.genename.gpe
 	newlyDefined_M=/rd1/user/liym/transcriptome/visualization/Final.426909.withName.gpe
 	##4.1 Comparisons with annotations in human dan macaque (Fig1d,e,f)		
-		###directory:/rd1/brick/lisx/pacbio/evaluation/Evalu-overlap/
+	###directory:/rd1/brick/lisx/pacbio/evaluation/Evalu-overlap/
 		###with human GENCODE
 		liftOver -genePred $newlyDefined_M /share/data/liftover/rheMac8/rheMac8ToHg19.over.chain.gz rheMac8ToHg19.bgm.gpe unmapped.rheMac8ToHg19
 		genePredToGtf file rheMac8ToHg19.bgm.gpe rheMac8ToHg19.bgm.gtf
@@ -503,6 +503,13 @@
 
 #7 Identification of human-specific distal PA sites and transcriptome evolution(liym@jupiter ~/transcriptome/PA/crossSpecies/speciesSpecific/version_all)
 	##7.1 Identification of human-specific distal PA sites
+			#at ~/transcriptome/PA/crossSpecies/speciesSpecific
+			awk -v OFS="\t" '{if($4!~","){print $1,$4-1,$4,$3":"$4,$5,$2}else{split($4,a,",");split($5,b,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3":"a[i],b[i],$2}}}' ../../brain/PA.onGene.tsv >R.brain.PA.onGene.bed6
+			awk -v OFS="\t" '{if($4!~","){print $1,$4-1,$4,$3":"$4,$5,$2}else{split($4,a,",");split($5,b,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3":"a[i],b[i],$2}}}' ../../cerebellum/PA.onGene.tsv >R.cerebellum.PA.onGene.bed6
+			awk -v OFS="\t" '{if($4!~","){print $1,$4-1,$4,$3":"$4,$5,$2}else{split($4,a,",");split($5,b,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3":"a[i],b[i],$2}}}' ../../heart/PA.onGene.tsv >R.heart.PA.onGene.bed6
+			ls R.*.PA.onGene.bed6|sed 's/.bed6//'|while read file;do
+				liftOver -minMatch=0.75 ${file}.bed6 ~/data/liftOver/rheMac8ToHg19.over.chain.gz ${file}.ToHg19.bed6 ${file}.ToHg19.unmapped &
+			done;
 		###7.1.1 Only keep gene with all PA sites lifted over to rheMac8
 			awk -v OFS="\t" '{if($4!~","){print $1,$4-1,$4,$3":"$4,$5,$2}else{split($4,a,",");split($5,b,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3":"a[i],b[i],$2}}}' ../../../hBrain/PA.onGene.tsv >H.brain.PA.onGene.bed6 
 			awk -v OFS="\t" '{if($4!~","){print $1,$4-1,$4,$3":"$4,$5,$2}else{split($4,a,",");split($5,b,",");for(i=1;i<=length(a);i++){print $1,a[i]-1,a[i],$3":"a[i],b[i],$2}}}' ../../../hCere/PA.onGene.tsv >H.cerebellum.PA.onGene.bed6 
@@ -526,59 +533,124 @@
 				awk -v OFS="\t" '{if($2>=30){print $1,$2-30,$3+30,$4,$5,$6}else{print $1,"0",$3+30,$4,$5,$6}}' $file|bedtools intersect -a stdin -b ../R.${tissue}.PA.onGene.bed6 -wo|cut -f4,7-12|join.pl -i1 H.${tissue}.PA.onGene.bed6 -f1 4 -f2 1|cut -f1-6,8- |awk '{split($4,a,":");split($10,b,":");if(a[1]==b[1]){print $0}}' >H.${tissue}CommonPA.H.Rpos.tsv;
 			done;
 		###7.1.3 Filter by newly-defined macaque gene models
-			awk -v OFS="\t" '{if($3=="+"){print $2,$5-1,$5,$12":"$5,"0",$3}else{print $2,$4,$4+1,$12":"$4+1,"0",$3}}' ~/transcriptome/visualization/Final.426909.withName.gpe |sort|uniq >Final.426909.withName.TTS.bed6 
-			cat ../R*.PA.onGene.bed6 Final.426909.withName.TTS.bed6 >tmp.bed6
+			awk -v OFS="\t" '{if($3=="+"){print $2,$5-1,$5,$12":"$5,"0",$3}else{print $2,$4,$4+1,$12":"$4+1,"0",$3}}' ~/transcriptome/visualization/geneNameAssign/version2_all_202012/Final.427404.withName.gpe |sort|uniq >Final.427404.withName.TTS.bed6 
+			cat ../R*.PA.onGene.bed6 Final.427404.withName.TTS.bed6 >tmp.bed6
 			ls H*SpecificPA.H.Rpos.tsv|while read file;do
 				tissue=$(echo $file|cut -f2 -d '.'|sed 's/SpecificPA//');
-				cut -f7-12 H.${tissue}SpecificPA.H.Rpos.tsv|perl ~/transcriptome/scripts/findHLongFromSpecific.pl -m tmp.bed6 -s >H.${tissue}Specific.longPA.bed6+ 2>H.${tissue}Specific.shortPA.bed6+
+				cut -f7-12 H.${tissue}SpecificPA.H.Rpos.tsv|perl ~/transcriptome/scripts/findHLongFromSpecific.pl -m tmp.bed6 -s -r H.${tissue}Specific.filter.log  >H.${tissue}Specific.longPA.bed6+ 2>H.${tissue}Specific.shortPA.bed6+
 			done;
 		###7.1.4 Filter using RNA-seq
+			#supporting reads >1
+			ls H*Specific.*PA.bed6+|sed 's/.bed6+//'|while read file;do
+				tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
+				awk '$5>1' ${file}.bed6+|join.pl -f1 4 -i2 H.${tissue}.PA.onGene.bed6 -f2 4|awk -v OFS="\t" '{split($4,a,":");print a[1]":"$8,$9,$10,$11,$12,$13,$14,$7,$8}'|sort|uniq|join.pl -i2 <(cat ../R.*PA.onGene.ToHg19.bed6|sort|uniq) -f2 4 |cut -f2-7,10-|awk '$1==$7 && $6==$12'|cut -f1-6,8,9|sort|uniq >${file}.hg19.bed6+
+			done;
 			join.pl -i1 H.brainSpecific.longPA.bed6+ -f1 4 -i2 H.brainSpecific.longPA.hg19.bed6+ -f2 4 -o1|awk -v OFS="\t" '{if($6=="+"){print $1,$7,$3,$4,$5,$6}else{print $1,$2,$8,$4,$5,$6}}' >H.brainSpecific.longPA.region.rheMac8.bed6
 			join.pl -i1 H.cerebellumSpecific.longPA.bed6+ -f1 4 -i2 H.cerebellumSpecific.longPA.hg19.bed6+ -f2 4 -o1|awk -v OFS="\t" '{if($6=="+"){print $1,$7,$3,$4,$5,$6}else{print $1,$2,$8,$4,$5,$6}}' >H.cerebellumSpecific.longPA.region.rheMac8.bed6
 			join.pl -i1 H.heartSpecific.longPA.bed6+ -f1 4 -i2 H.heartSpecific.longPA.hg19.bed6+ -f2 4 -o1|awk -v OFS="\t" '{if($6=="+"){print $1,$7,$3,$4,$5,$6}else{print $1,$2,$8,$4,$5,$6}}' >H.heartSpecific.longPA.region.rheMac8.bed6
-			ls *.region.rheMac8.bed6|sed 's/.bed6//'|while read file;do
-				gpeFeature.pl -e ~/transcriptome/visualization/Final.426909.withName.gpe |bedtools subtract -a ${file}.bed6 -b stdin -s >${file}.unique.bed6
-				sort -k4,4 ${file}.unique.bed6|bed6Togpe.pl|genePredToBed stdin ${file}.uniqe.bed12
-			done;
-			###liym@pluto:/rd1/user/liym/transcriptome/RNA-seq/rheMac8/RSeQC-FPKM/speciesSpecific/version_all/
+			###@pluto:/rd1/user/liym/transcriptome/RNA-seq/rheMac8/RSeQC-FPKM/speciesSpecific/version_all
+			scp liym@jupiter:/rd1/user/liym/transcriptome/PA/crossSpecies/speciesSpecific/version_all/*region.rheMac8.bed6 .
 			pythonPATH=/mnt/share/liym/python/python/Python-2.7.14
 			scriptPATH=/mnt/share/liym/tools/RSeQC-2.6.3/install/home/share/local/bin
 			ls *.bed6 |sed 's/.bed6//'|while read file;do bed6ToBed12.pl ${file}.bed6 >${file}.bed12; done;
 			ls *bed12|while read file;do
-					tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
-					$pythonPATH/python $scriptPATH/FPKM_count.py -i ../../../${tissue}.uniq.sorted.bam -o ${tissue} -r $file -d 1+-,1-+,2++,2-- -s 0 >log/${tissue}.log 2>log/${tissue}.err &
-					$pythonPATH/python $scriptPATH/FPKM_count.py -i ../../../old.${tissue}.uniq.sorted.bam -o old.${tissue} -r $file -d 1+-,1-+,2++,2-- -s 0 >log/old.${tissue}.log 2>log/old.${tissue}.err &
-					if [[ $tissue =~ "cere" ]];then
-							 ls /rd1/user/lisx/annotation/RNAseq/cere-12.13/*/*/uniq.sorted.bam|while read bamFile;do
-									sample=$(echo $bamFile|cut -f9 -d '/');            
-									$pythonPATH/python $scriptPATH/FPKM_count.py -i $bamFile -o ${tissue}-${sample} -r $file -s 0 >log/${tissue}-${sample}.log 2>log/${tissue}-${sample}.err
-							 done;
-					else
-							ls /rd1/user/lisx/annotation/RNAseq/${tissue}-12.13/*/*/uniq.sorted.bam|while read bamFile;do
-									sample=$(echo $bamFile|cut -f9 -d '/');
-									$pythonPATH/python $scriptPATH/FPKM_count.py -i $bamFile -o ${tissue}-${sample} -r $file -s 0 >log/${tissue}-${sample}.log 2>log/${tissue}-${sample}.err
-							done;
-					fi
+				tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
+				$pythonPATH/python $scriptPATH/FPKM_count.py -i ../../../${tissue}.uniq.sorted.bam -o ${tissue} -r $file -d 1+-,1-+,2++,2-- -s 0 >log/${tissue}.log 2>log/${tissue}.err &
+				$pythonPATH/python $scriptPATH/FPKM_count.py -i ../../../old.${tissue}.uniq.sorted.bam -o old.${tissue} -r $file -d 1+-,1-+,2++,2-- -s 0 >log/old.${tissue}.log 2>log/old.${tissue}.err &
+				if [[ $tissue =~ "cere" ]];then
+					 ls /rd1/user/lisx/annotation/RNAseq/cere-12.13/*/*/uniq.sorted.bam|while read bamFile;do
+						sample=$(echo $bamFile|cut -f9 -d '/');
+						$pythonPATH/python $scriptPATH/FPKM_count.py -i $bamFile -o ${tissue}-${sample} -r $file -s 0 >log/${tissue}-${sample}.log 2>log/${tissue}-${sample}.err
+					 done;
+				else
+					ls /rd1/user/lisx/annotation/RNAseq/${tissue}-12.13/*/*/uniq.sorted.bam|while read bamFile;do
+						sample=$(echo $bamFile|cut -f9 -d '/');
+						$pythonPATH/python $scriptPATH/FPKM_count.py -i $bamFile -o ${tissue}-${sample} -r $file -s 0 >log/${tissue}-${sample}.log 2>log/${tissue}-${sample}.err
+					done;
+				fi
 			done;
 			paste *brain*xls|grep -v "#"|awk '($9+$18+$27+$36+$45+$54)/6<0.2{print $4}' >brain.specificFilterbyRNA-seq.list
 			paste *cerebellum*xls|grep -v "#"|awk '($9+$18+$27+$36+$45+$54)/6<0.2{print $4}' >cerebellum.specificFilterbyRNA-seq.list
 			paste *heart*xls|grep -v "#"|awk '($9+$18+$27+$36+$45+$54)/6<0.2{print $4}' >heart.specificFilterbyRNA-seq.list
-		###7.1.5 Final human-specific distal PA sites
-			cat <(join.pl -i1 H.brainSpecific.longPA.hg19.bed6+ -f1 4 -i2 brain.specificFilterbyRNA-seq.list -o1|awk '{print $0"\tbrain"}') <(join.pl -i1 H.cerebellumSpecific.longPA.hg19.bed6+ -f1 4 -i2 cerebellum.specificFilterbyRNA-seq.list -o1|awk '{print $0"\tcerebellum"}') <(join.pl -i1 H.heartSpecific.longPA.hg19.bed6+ -f1 4 -i2 heart.specificFilterbyRNA-seq.list -o1|awk '{print $0"\theart"}') >H.specific.longPA.final.hg19.bed6+
-			cat <(awk '$9=="brain"' H.specific.longPA.final.hg19.bed6+|join.pl -i1 H.brainSpecific.longPA.bed6+ -f1 4 -f2 4 -o1|awk '{print $0"\tbrain"}') <(awk '$9=="cerebellum"' H.specific.longPA.final.hg19.bed6+|join.pl -i1 H.cerebellumSpecific.longPA.bed6+ -f1 4 -f2 4 -o1|awk '{print $0"\tcerebellum"}') <(awk '$9=="heart"' H.specific.longPA.final.hg19.bed6+|join.pl -i1 H.heartSpecific.longPA.bed6+ -f1 4 -f2 4 -o1|awk '{print $0"\theart"}') >H.specific.longPA.final.rheMac8.bed6+
+			ls *RNA-seq.list|while read file;do
+				tissue=$(echo $file|cut -f1 -d '.');
+				join.pl -i1 H.${tissue}Specific.longPA.region.rheMac8.bed12 -f1 4 -i2 $file -o1 >H.${tissue}Specific.longPA.region.rheMac8.RBfiltered.bed12
+				/home/light/bin/x86_64/liftOver -minMatch=0.7 H.${tissue}Specific.longPA.region.rheMac8.RBfiltered.bed12 /rd1/brick/share/data/liftover/rheMac8/rheMac8ToRheMac2.over.chain.gz H.${tissue}Specific.longPA.region.RBfiltered.TorheMac2.bed12 H.${tissue}Specific.longPA.region.RBfiltered.TorheMac2.unmapped
+			done;
+			###@galaxy:/rd1/user/liym/transcriptome/202003-macaqueRNA-seqFilter
+			scp liym@pluto:/rd1/user/liym/transcriptome/RNA-seq/rheMac8/RSeQC-FPKM/speciesSpecific/version_all/*RBfiltered.TorheMac2.bed12 .
+			scriptPATH=/home/liym/.local/bin
+			/home/pengq/tools/conda/miniconda3/bin/genePredToBed /rd1/user/liym/mnt/data/structure/rheMac2/rheMac2.ensGene.noBin.gpe rheMac2.ensGene.bed12
+			sed -i 's/^chr//' rheMac2.ensGene.bed12
+			mkdir brain cerebellum heart log
+			ls H*bed12|while read file;do
+				sed -i 's/^chr//' $file;
+				tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
+				#tissueUp=$(echo $tissue| sed 's/^[a-z]/\U&/');
+				ls /home/lixs/2019_Nature_macaque_bam/macaque/coor-sorted/*bam|while read bamfile;do
+					prefix=$(basename $bamfile|sed 's/.sorted.bam//');
+					python $scriptPATH/FPKM_count.py -i $bamfile -o ${tissue}/$prefix -r $file -u -d +-,-+ >log/${prefix}.log 2>log/${prefix}.err
+				done;
+			done;
+			mkdir RB-filter & cd RB-filter
+			##Process in mercury
+			scp liym@pluto:/rd1/user/liym/transcriptome/RNA-seq/rheMac8/RSeQC-FPKM/speciesSpecific/version_all/*RBfiltered.TorheMac2.bed12 .
+			#rm those already processed (brain/heart/cerebellum)
+			mkdir brain cerebellum heart
+			ls *bed12|while read file;do
+					tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
+					cat RB_bam|while read bamfile;do
+							prefix=$(echo $bamfile|sed 's;/;_;g'|sed 's/_rd1_ftp_ucsc_expression_//'|sed 's/.sorted.bam//'|sed 's/_reads.bam//');
+							if [[ $bamfile =~ "burgeRnaSeq" ]] || [[ $bamfile =~ "rbRnaSeq" ]];then
+									/home/liym/anaconda3/bin/FPKM_count.py -i $bamfile -o ${tissue}/${prefix} -r $file -u -d 1+-,1-+,2++,2-- >log/${tissue}-${prefix}.log 2>log/${tissue}-${prefix}.err;
+							else
+									/home/liym/anaconda3/bin/FPKM_count.py -i $bamfile -o ${tissue}/${prefix} -r $file -u >log/${tissue}-${prefix}.log 2>log/${tissue}-${prefix}.err;
+							fi
+					done;
+			done;
+			##END process in mercury
+			cut -f4 H.brainSpecific.longPA.region.RBfiltered.TorheMac2.bed12 >H.brainSpecific.RB.all.tsv
+			cut -f4 H.cerebellumSpecific.longPA.region.RBfiltered.TorheMac2.bed12 >H.cerebellumSpecific.RB.all.tsv
+			cut -f4 H.heartSpecific.longPA.region.RBfiltered.TorheMac2.bed12 >H.heartSpecific.RB.all.tsv
+			ls *bed12|while read file;do
+					tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
+					ls ${tissue}/*|while read fpkm;do
+							sample=$(basename $fpkm);
+							paste H.${tissue}Specific.RB.all.tsv <(grep -v "#" $fpkm|cut -f9) >tmp;
+							mv tmp H.${tissue}Specific.RB.all.tsv;
+					done;
+			done;
 			
-			scp liym@galaxy:/rd1/user/liym/transcriptome/202003-macaqueRNA-seqFilter/H*tsv .
-ls *tsv |sed 's/.tsv//'|while read file;do
-    Rscript ~/bin/rowMean.R -i=${file}.tsv -s=2 -o=${file}.mean.tsv
-    awk -v FS="\t" '$NF<0.2{print $1}' ${file}.mean.tsv >${file}.list
-done;
-ls *all.tsv|while read file;do
-    tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
-    comm -12 <(sort H.${tissue}Specific.all.list) <(sort H.${tissue}Specific.${tissue}.list) >H.${tissue}Final.list
-done;
-#List-2: Specific distal PA sites compared to macaque
-cat <(join.pl -i1 ../H.brainSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.brainFinal.list -o1) <(join.pl -i1 ../H.cerebellumSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.cerebellumFinal.list -o1) <(join.pl -i1 ../H.heartSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.heartFinal.list -o1)|sort -u|bedtools merge -s -d 30 -nms -scores collapse -i stdin|awk -v OFS="\t" '{split($4,a,":");print $0,a[1]}'|join.pl -f1 7 -i2 <(cut -f4,7,8 ../H.*Specific.longPA.hg19.bed6+|awk -v OFS="\t" '{split($1,a,":");print a[1],$2,$3}'|sort -u) |cut -f1-6,9,10 >H.combinedSpecific.all.hg19.bed6+
-		###7.1.  Mouse data to check gain or loss
+			ls H*bed12|while read file;do
+				tissue=$(echo $file|cut -f2 -d '.'|sed 's/Specific//');
+				tissueUp=$(echo $tissue| sed 's/^[a-z]/\U&/');
+				#ls ${tissue}/*${tissueUp}*|while read fpkm1;do
+				#	if [ -e H.${tissue}Specific.${tissue}.tsv ];then
+				#		paste H.${tissue}Specific.${tissue}.tsv <(grep -v "#" $fpkm1|cut -f9) >tmp;
+				#		mv tmp H.${tissue}Specific.${tissue}.tsv;
+				#	else
+				#		paste RB-filter/H.${tissue}Specific.RB.${tissue}.tsv <(grep -v "#" $fpkm1|cut -f9) >H.${tissue}Specific.${tissue}.tsv;
+				#	fi
+				#done;
+				ls ${tissue}/*|while read fpkm2;do
+					sample=$(basename $fpkm2);
+						if [ -e H.${tissue}Specific.all.tsv ];then
+							paste H.${tissue}Specific.all.tsv <(grep -v "#" $fpkm2|cut -f9) >tmp;
+							mv tmp H.${tissue}Specific.all.tsv;
+						else
+							paste RB-filter/H.${tissue}Specific.RB.all.tsv <(grep -v "#" $fpkm2|cut -f9) >H.${tissue}Specific.all.tsv;
+						fi
+				done;
+			done;
+			##
+			scp liym@galaxy:/rd1/user/liym/transcriptome/202003-macaqueRNA-seqFilter/H.*tsv .
+			ls *tsv |sed 's/.tsv//'|while read file;do
+				Rscript ~/bin/rowMean.R -i=${file}.tsv -s=2 -o=${file}.mean.tsv
+				awk -v FS="\t" '$NF<0.2{print $1}' ${file}.mean.tsv >${file}.list
+			done;
+			## Specific distal PA sites compared to macaque
+			cat <(join.pl -i1 ../H.brainSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.brainSpecific.all.list -o1) <(join.pl -i1 ../H.cerebellumSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.cerebellumSpecific.all.list -o1) <(join.pl -i1 ../H.heartSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.heartSpecific.all.list -o1)|sort -u|bedtools merge -s -d 30 -nms -scores collapse -i stdin|awk -v OFS="\t" '{split($4,a,":");print $0,a[1]}'|join.pl -f1 7 -i2 <(cut -f4,7,8 ../H.*Specific.longPA.hg19.bed6+|awk -v OFS="\t" '{split($1,a,":");print a[1],$2,$3}'|sort -u) |cut -f1-6,9,10 >H.combinedSpecific.all.hg19.bed6+
+		###7.1.5  Mouse data to check gain or loss
 			cut -f4 H.combinedSpecific.all.hg19.bed6+|cut -f1 -d ':'|sort|uniq|join.pl -i2 ~/data/homolog_infor/human_mouse_orthology.txt|cut -f2,3 >H.M.ortholog.specific.final.txt #change B3galtl to itsynonyms B3galtl
 			awk -v OFS="\t" '{split($4,a,":");print $0,a[1]}' mBrain.refGene.gencode.forCmp.bed6|join.pl -f1 7 -i2 H.M.ortholog.specific.final.txt -f2 2|awk -v OFS="\t" '{print $1,$2,$3,$8":"$4,$5,$6}' >mBrain.refGene.gencode.forCmp.HgeneName.bed6
 			perl ~/transcriptome/scripts/findHLongFromSpecific.pl -i H.combinedSpecific.all.hg19.bed6+ -m mBrain.refGene.gencode.forCmp.HgeneName.bed6 -r H.combinedSpecific.all.cmpMouse.log >H.combinedSpecific.all.FilterBymouse.hg19.bed6+
@@ -601,17 +673,19 @@ cat <(join.pl -i1 ../H.brainSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.brainFinal.li
 			done;
 			Rscript ~/bin/rowMean.R -i=H.combinedSpecific.all.mm9RNAseq.FPKM.tsv -s=2 -o=H.combinedSpecific.all.mm9RNAseq.FPKM.mean.tsv
 			awk -v FS="\t" '$NF>=0.2{print $1}' H.combinedSpecific.all.mm9RNAseq.FPKM.mean.tsv >mm9RNAseq.filtered.list
+		###7.1.6 Get final lists
 			cat mm9IsoAnno.siltered.list mm9RNAseq.filtered.list|join.pl -i1 H.combinedSpecific.all.hg19.bed6+ -f1 4 -v -o1 >H.combinedSpecific.all.humanGain.hg19.bed6+
 
 	##7.2 Motif comparison (Fig.5c, d)
-		paste <(perl /mnt/share/liym/bin/PAmotifFinding.pl -b H.specific.longPA.final.hg19.bed6+ -l 50 -f /mnt/share/liym/data/genome/hg19/hg19.fa|cut -f1-10) <(perl /mnt/share/liym/bin/PAmotifFinding.pl -b H.specific.longPA.final.rheMac8.bed6+ -l 50 -f /mnt/share/liym/data/genome/rheMac8/rheMac8.fa|cut -f10) <(perl /mnt/share/liym/bin/PAmotifFinding.pl -b H.specific.longPA.final.hg19.bed6+ -l 50 -f /mnt/share/liym/data/ancestor/hg19_inhouse/hg19.ancestor.3species.fa|cut -f10) >H.specific.longPA.final.PAmotif.long.bed6+
-		paste <(awk '{if($10!="AATAAA" && $10!="NA"){print "Other"}else{print $10}}' H.specific.longPA.final.PAmotif.long.bed6+|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1) <(awk '{if($11!="AATAAA" && $11!="NA"){print "Other"}else{print $11}}' H.specific.longPA.final.PAmotif.long.bed6+|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2) <(awk '{if($12!="AATAAA" && $12!="NA"){print "Other"}else{print $12}}' H.specific.longPA.final.PAmotif.long.bed6+|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2)|Rscript ~/transcriptome/scripts/barplot.PAmotif.R -names="Human,macaque,ancestor" -combine=T -o=H.specific.longPA.final.HRA.PAmotif.long.pdf
-		cut -f9 H.specific.longPA.final.hg19.bed6+|sort|uniq|while read tissue;do
-			awk -v OFS="\t" '{print $1,$7,$8,$4,$5,$6,$9}' H.specific.longPA.final.hg19.bed6+|awk -v value=$tissue '$7==value'|bedtools closest -s -d -a stdin -b H.${tissue}.PA.onGene.bed6 |awk -v OFS="\t" '$14<=30{split($4,a,":");split($11,b,":");if(a[1]==b[1]){print $8,$9,$10,$4,$12,$13}}'|join.pl -f1 4 -i2 <(awk -v value=$tissue -v OFS="\t" '$9==value{print $1,$7,$8,$4,$5,$6,$9}' H.specific.longPA.final.rheMac8.bed6+) -f2 4 >>H.specific.longPA.final.commonShortPA.HRlocus.tsv
-		done;
-		paste <(cut -f1-6 H.specific.longPA.final.commonShortPA.HRlocus.tsv|perl /mnt/share/liym/bin/PAmotifFinding.pl -l 50 -f /mnt/share/liym/data/genome/hg19/hg19.fa|cut -f1-7) <(cut -f7- H.specific.longPA.final.commonShortPA.HRlocus.tsv|perl /mnt/share/liym/bin/PAmotifFinding.pl -l 50 -f /mnt/share/liym/data/genome/rheMac8/rheMac8.fa|cut -f1-8) >H.specific.longPA.final.commonShortPA.HRmotif.tsv
-		cut -f1-6 H.specific.longPA.final.commonShortPA.HRlocus.tsv|perl /mnt/share/liym/bin/PAmotifFinding.pl -l 50 -f /mnt/share/liym/data/ancestor/hg19_inhouse/hg19.ancestor.3species.fa >H.specific.longPA.final.commonShortPA.ancestor.PAmotif.bed6+
-		paste <(cut -f7 H.specific.longPA.final.commonShortPA.HRmotif.tsv|awk '{if($0!="AATAAA" && $0!="NA"){print "Other"}else{print $0}}'|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1) <(cut -f15 H.specific.longPA.final.commonShortPA.HRmotif.tsv|awk '{if($0!="AATAAA" && $0!="NA"){print "Other"}else{print $0}}'|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2) <(cut -f7 H.specific.longPA.final.commonShortPA.ancestor.PAmotif.bed6+|awk '{if($0!="AATAAA" && $0!="NA"){print "Other"}else{print $0}}'|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2)|Rscript ~/transcriptome/scripts/barplot.PAmotif.R -names="Human,macaque,ancestor" -combine=T -o=H.specific.longPA.final.commonShortPA.HRmotif.withAncestor.pdf
+		awk -v OFS="\t" '{print $1,$7,$8,$4,$5,$6}' H.combinedSpecific.all.humanGain.hg19.bed6+|bedtools closest -s -d -a stdin -b <(cat ../../H.*PA.onGene.bed6) |awk -v OFS="\t" '$13<=30{split($4,a,":");split($10,b,":");if(a[1]==b[1]){print $7,$8,$9,$4,"0",$12}}'|sort -u >H.combinedSpecific.all.humanGain.commShortPA.hg19.bed6
+		liftOver -minMatch=0.75 -bedPlus=6 H.combinedSpecific.all.humanGain.commShortPA.hg19.bed6 ~/data/liftOver/hg19ToRheMac8.over.chain H.combinedSpecific.all.humanGain.commShortPA.rheMac8.bed6 H.combinedSpecific.all.humanGain.commShortPA.rheMac8.unmapped
+		join.pl -i1 H.combinedSpecific.all.humanGain.commShortPA.hg19.bed6 -f1 4 -i2 H.combinedSpecific.all.humanGain.commShortPA.rheMac8.bed6 -f2 4 -o1|sort -u|perl ~/mnt/bin/PAmotifFinding.pl -l 50 -f ~/data/genome/human/hg19.fa >H.combinedSpecific.all.humanGain.commShortPA.H.PAmotif.bed6+
+		perl ~/mnt/bin/PAmotifFinding.pl -b H.combinedSpecific.all.humanGain.commShortPA.rheMac8.bed6 -l 50 -f ~/data/genome/rheMac8/rheMac8.fa |cut -f1-7 >H.combinedSpecific.all.humanGain.commShortPA.R.PAmotif.bed6+
+		perl ~/mnt/bin/PAmotifFinding.pl -b H.combinedSpecific.all.humanGain.commShortPA.H.PAmotif.bed6+ -l 50 -f ~/mnt/data/ancestor/hg19_inhouse/hg19.ancestor.3species.fa |cut -f1-7,11|join.pl -f1 4 -i2 H.combinedSpecific.all.humanGain.commShortPA.R.PAmotif.bed6+ -f2 4 |cut -f1-8,15|sort -u|awk -v OFS="\t" '{print $4,$7,$9,$8}' >commonShortPA.HRancestor.PAmotif.tsv
+		paste <(cut -f2 commonShortPA.HRancestor.PAmotif.tsv|awk '{if($0!="AATAAA" && $0!="NA"){print "Other"}else{print $0}}'|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1) <(cut -f3 commonShortPA.HRancestor.PAmotif.tsv|awk '{if($0!="AATAAA" && $0!="NA"){print "Other"}else{print $0}}'|sort|uniq -c|awk 'BEGIN{print "NA\t0"}{print $2"\t"$1}'|sort -k1,1|cut -f2) <(cut -f4 commonShortPA.HRancestor.PAmotif.tsv|awk '{if($0!="AATAAA" && $0!="NA"){print "Other"}else{print $0}}'|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2) |Rscript ~/transcriptome/scripts/barplot.PAmotif.R -names="Human,macaque,ancestor" -combine=T -o=H.combinedSpecific.all.humanGain.commonShortPA.HRancestor.PAmotif.pdf
+		
+		bedtools intersect -a H.combinedSpecific.all.humanGain.hg19.bed6+ -b ~/transcriptome/PA/crossSpecies/speciesSpecific/version_all/H.specific.longPA.final.PAmotif.long.bed6+ -s -wo|cut -f1-8,18,19,20|sort -u >longSpecificPA.HRancestor.PAmotif.tsv
+		paste <(awk '{if($9!="AATAAA" && $9!="NA"){print "Other"}else{print $9}}' longSpecificPA.HRancestor.PAmotif.tsv|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1) <(awk '{if($10!="AATAAA" && $10!="NA"){print "Other"}else{print $10}}' longSpecificPA.HRancestor.PAmotif.tsv|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2) <(awk '{if($11!="AATAAA" && $11!="NA"){print "Other"}else{print $11}}' longSpecificPA.HRancestor.PAmotif.tsv|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1|cut -f2)|Rscript ~/transcriptome/scripts/barplot.PAmotif.R -names="Human,macaque,ancestor" -combine=T -o=H.combinedSpecific.all.humanGain.longPA.HRancestor.PAmotif.long.pdf
 	##7.3 Gene expression comparison (Fig.6a)
 		###7.3.1 Mean FPKM for brain, cerebellum, heart in human and macaque
 			awk -v FS="\t" -v OFS="\t" '{print $2,$16,$14,$36}' /mnt/share/liym/data/GTEx/GTEx_phe000006.v2.average_tissue_rpkm.tsv >GTEx_phe000006.v2.average_tissue_rpkm.BCH.tsv  
@@ -655,7 +729,7 @@ cat <(join.pl -i1 ../H.brainSpecific.longPA.hg19.bed6+ -f1 4 -i2 H.brainFinal.li
 			cat <(awk '$1=="brain"' H.specificLongPA.HR.FPKM.PAusage.tsv|join.pl -f1 5 -i2 brain.specificFilterbyRNA-seq.list -o1) <(awk '$1=="cerebellum"' H.specificLongPA.HR.FPKM.PAusage.tsv|join.pl -f1 5 -i2 cerebellum.specificFilterbyRNA-seq.list -o1) <(awk '$1=="heart"' H.specificLongPA.HR.FPKM.PAusage.tsv|join.pl -f1 5 -i2 heart.specificFilterbyRNA-seq.list -o1) >H.specificLongPA.HR.FPKM.PAusage.final.tsv
 			cut -f2 H.specificLongPA.HR.FPKM.final.tsv|sort|uniq >H.specificLongPA.HR.final.list.txt
 			cut -f2 H.commonPA.HR.FPKM.tsv|sort|uniq >H.commonPA.HR.geneList.txt
-	##7.4 Gene tissue distribution comparison (Fig.6b)
+	##7.4 Gene tissue distribution comparison
 		awk -v FS="\t" -v OFS="\t" '{print $2,$16,$14,$36,$37,$41,$52}' /mnt/share/liym/data/GTEx/GTEx_phe000006.v2.average_tissue_rpkm.tsv >GTEx_phe000006.v2.average_tissue_rpkm.BCHKMT.tsv
 		###liym@pluto:/rd1/user/liym/transcriptome/RNA-seq/rheMac8/RSeQC-FPKM
 		paste BCH.meanFPKM.tsv <(paste kidney.FPKM.xls old.kidney.FPKM.xls|grep -v "#"|awk '{print ($9+$18)/2}') <(paste muscle.FPKM.xls old.muscle.FPKM.xls|grep -v "#"|awk '{print ($9+$18)/2}') <(paste testis.FPKM.xls old.testis.FPKM.xls|grep -v "#"|awk '{print ($9+$18)/2}') >BCHKMT.meanFPKM.tsv    
