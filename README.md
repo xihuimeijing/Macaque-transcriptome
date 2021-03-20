@@ -7,7 +7,7 @@ transcriptomeProject.sh: This file contains all the steps to analyze all the dat
 
 /scripts: this directory contains some useful scripts for both NGS and Iso-seq data analysis. 
 
-  Reads processing:
+Reads processing:
   
 		PAratio.OnGenes.sh: find PA sites based on Iso-seq reads, assign them to genes and calculate the PA usage/ratio (PA supported reads/all reads assigned to the gene) for each gene.
 
