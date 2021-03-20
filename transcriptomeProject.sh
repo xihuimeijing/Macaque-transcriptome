@@ -324,48 +324,36 @@
 			perl ~/bin/gpeFeature.pl -c -s hg19.refSeq.coding.gpe >hg19.refSeq.CDS.bed
 			awk -v OFS="\t" '{split($11,a,",");sum=0;for(i=1;i<=length(a);i++){sum=sum+a[i]}print $4,sum}' hg19.refSeq.CDS.bed|join.pl -i2 hg19.refSeq.coding.gpe -f2 1|awk -v OFS="\t" '{print $14,$2}'|sort -k1,1|Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=hg19.refSeq.CDS.length.txt
 			join.pl -i1 Final.427404.CDS.length.txt -i2 hg19.refSeq.CDS.length.txt |awk '{print ($2-$4)/$4}' >CDS.length.cmp.txt	
-		###4.6.2 Coverage proportation and identity (Fig2g,h)
-			cd AAcompare/
-			### get the homologous genes of human and macaque
-			perl $perlScript_lsx/comm_file1_file2.pl -f1 <(less -S ../hg19RheMac8.cdslength |cut -f 1 ) -f2 <(less -S /share/data/structure/gpe/hg19.refGene.gpe |awk '{print $13"\t"$0}') -n 1 -e1 0 -e2 20|cut -f 4- > hg19.refHomo.gpe
-			perl $perlScript_lsx/comm_file1_file2.pl -f1 <(less -S ../hg19RheMac8.cdslength |cut -f 1 ) -f2 <(less -S ../rheMac8.bgm.gpe |awk '{print $12"\t"$0}') -n 1 -e1 0 -e2 20|cut -f 3- > rheMac8.bgmHomo.gpe
-			### get the aa sequence of human and macaque homologous genes
-			#### for macaque
-			cd rheMac8-aa
-			less ../rheMac8.bgmHomo.gpe|grep -v chrUn|awk '{if ($6!=$7)print $0}' > rheMac8.gpe
-			perl ${perlPath}/gpe-outputCDS.pl -f1 <(awk '{print 0"\t"$0}' rheMac8.gpe) > rheMac8.gpe.cds
-			gpe2bed.pl <(cut -f 2- rheMac8.gpe.cds) > rheMac8.bed
-			bedtools getfasta -fi /share/data/fna/rheMac8/all.fa -bed rheMac8.bed -fo rheMac8.fa -split -tab -s
-			perl ${perlPath}/comm_file1_file2.pl -f1 <(less -S rheMac8.gpe|awk '{print ">"$1"\t>"$1"#"$12}') -f2 <(paste <(cut -f 1-4 rheMac8.bed) rheMac8.fa |awk '{print ">"$4"\t"$6}' ) -n 1 -e1 1 -e2 1|cut -f 2,4|sed 's/\t/\n/g' > trans.fa
-			perl ${perlPath}/Base.faConvertProtein.fa.pl --Fasta trans.fa --output trans.aa
-			makeblastdb -in trans.aa -dbtype prot -parse_seqids -out trans.aa > blastdb.log
-			rm rheMac8.*
-			less -S trans.aa|awk '{if(0==NR%2)printf("%s\n",$0);else printf("%s\t",$0)}'|awk '{print $1"\t"length($2)}'|sed 's/>//g' > trans.aa.length
-			#### for human
-			cd ../hg19-aa
-			less -S ../hg19.refHomo.gpe |awk '{if ($2!~/_/)print $0}'|awk '{if ($6!=$7)print $0}' > hg19.gpe
-			perl ${perlPath}/gpe-outputCDS.pl -f1 <(awk '{print 0"\t"$0}' hg19.gpe) > hg19.gpe.cds
-			gpe2bed.pl <(cut -f 2- hg19.gpe.cds) > hg19.bed
-			bedtools getfasta -fi /share/data/fna/hg19/all.fa -bed hg19.bed -fo hg19.fa -split -tab -s
-			perl ${perlPath}/comm_file1_file2.pl -f1 <(less -S hg19.gpe|awk '{print ">"$1"\t>"$1"#"$12}') -f2 <(paste <(cut -f 1-4 hg19.bed) hg19.fa |awk '{print ">"$4"\t"$6}' ) -n 1 -e1 1 -e2 1|cut -f 2,4|sed 's/\t/\n/g' > trans.fa
-			perl ${perlPath}/Base.faConvertProtein.fa.pl --Fasta trans.fa --output trans.aa 2>conPro.log
-			rm hg19.*
-			less -S trans.aa|awk '{if(0==NR%2)printf("%s\n",$0);else printf("%s\t",$0)}'|awk '{print $1"\t"length($2)}'|sed 's/>//g' > trans.aa.length
-			### blastp
-			cd ../result
-			blastp -query hg19-aa/trans.aa -out result/blastp.out -db rheMac8-aa/trans.aa -outfmt 6 -evalue 1e-5 -num_threads 50 > result/blastp.err 2> result/blastp.log
-			### calculate the identity and coverage
-			cd ../similarity
-			less -S ../result/blastp.out |sed 's/#/\t/g'|awk '{if ($2==$4)print $0}' >blastp.out
-			perl $perlScript_lsx/comm_file1_file2.pl -f1 ../rheMac8-aa/trans.aa.length -f2 <(perl $perlScript_lsx/comm_file1_file2.pl -f1 ../hg19-aa/trans.aa.length -f2 blastp.out -n 1 -e1 1 -e2 1 |awk '{print $4"\t"$0}') -n 1 -e1 1 -e2 1 |cut -f 1,2,4,5,8-|sed 's/#/\t/g'|awk '{print $2"\t"$0}'|awk '{if ($1==$6)print $0}'|cut -f 1,2,4,5,7- > blastp.result
-			perl $perlScript_lsx/bin_value.pl -f <(cut -f 6 blastp.result) -value 1 -n 20 -max 100 -min 0 -equal max -outbin min~max -outnumber percent |awk '{a=a+$2;print $0"\t"a}'>distri.allidentity
-			less -S blastp.result |awk '{print $1"\t"($11-$10+1)/$5"\t"$6}'|sort|uniq > all.coverage.identity
-			perl $perlScript_lsx/bin_value.pl -f <(awk '{print $2*100}' all.coverage.identity ) -value 1 -n 20 -max 100 -min 0 -equal max -outbin min~max -outnumber percent |awk '{a=a+$2;print $0"\t"a}' >distri.allcoverage
-			perl $perlScript_lsx/bin-mergeValue.pl -f <(cut -f 1,3 all.coverage.identity|sort|uniq ) |sed 's/,/\t/g'|awk '{a=$2;for (i=2;i<=NF;i++){if (a<$i){a=$i}};print $1"\t"a  }' > all.topidnetity
-			perl $perlScript_lsx/bin_value.pl -f all.topidnetity -value 2 -n 20 -max 100 -min 0 -equal max -outbin min~max -outnumber percent |awk '{a=a+$2;print $0"\t"a}' > distri.topidentity
-			perl $perlScript_lsx/bin-mergeValue.pl -f <(perl $perlScript_lsx/comm_file1_file2.pl -f1 all.topidnetity -f2 <(awk '{print $1"\t"$3"\t"$2}' all.coverage.identity ) -n 2 -e1 0 -e2 1|awk '{print $3"\t"$5*100}' ) |sed 's/,/\t/g'|awk '{a=$2;for (i=2;i<=NF;i++){if (a<$i){a=$i}};print $1"\t"a  }' > all.topidnetity-topcoverage
-			perl $perlScript_lsx/bin_value.pl -f all.topidnetity-topcoverage  -value 2 -n 20 -max 100 -min 0 -equal max -outbin min~max -outnumber percent |awk '{a=a+$2;print $0"\t"a}' > distri.topidnetity-topcoverage
-
+		###4.6.2 CDS comparison between human and macaque
+			perl /rd1/user/shenq/Annotation/Pacbio/venus_bin_20180419/grep_cdsfasta_from_gpe.pl -r ~/data/genome/rheMac8/rheMac8.fa Final.427404.withName.coding.gpe | perl /rd1/user/shenq/Annotation/Pacbio/venus_bin_20180419/Base.faConvertProtein.fa.pl -i - -o Final.427404.withName.coding.aa.fa
+			perl /rd1/user/shenq/Annotation/Pacbio/venus_bin_20180419/grep_cdsfasta_from_gpe.pl -r ~/data/genome/human/hg19.fa hg19.refSeq.coding.gpe | perl /rd1/user/shenq/Annotation/Pacbio/venus_bin_20180419/Base.faConvertProtein.fa.pl -i - -o hg19.refSeq.coding.aa.fa
+			makeblastdb -in Final.427404.withName.coding.aa.fa -dbtype prot -out Final.427404.coding.db >makeblastdb.log
+		###4.6.3 Compare with genbank proteins
+			mkdir genbank refSeq
+			blastp -query hg19.refSeq.coding.aa.fa -out blastp_hg19refSeq -db Final.427404.coding.db -outfmt 7 -evalue 1e-5 -num_descriptions 10 -num_threads 10 > blastp.hg19refSeq.log 2>blastp.hg19refSeq.err
+			grep --color=always -v "^#" blastp_hg19refSeq | awk -v OFS="\t" '{split($2,a,"|");print $1,$2,$3,($10-$9+1)*3/a[5],a[2]}' > blastp_hg19refSeq.summary.tsv
+			awk '{print $5"\t"$3}' blastp_hg19refSeq.summary.tsv | sort -u | Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=blastp_hg19refSeq.summary.maxIdentity.tsv
+			awk '{print $5"\t"$4}' blastp_hg19refSeq.summary.tsv | sort -u | Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=blastp_hg19refSeq.summary.maxCoverage.tsv
+			awk -v OFS="\t" '{if($2>95 && $2<=100){print $0,"95-100"}else if($2>90 && $2<=95){print $0,"90-95"}else if($2>85 && $2<=90){print $0,"85-90"}else if($2>80 && $2<=85){print $0,"80-85"}else{print $0,"0-80"}}' blastp_hg19refSeq.summary.maxIdentity.tsv|cut -f3|sort|uniq -c|awk '{print $2"\t"$1}' |sort -k1,1 >blastp_hg19refSeq.summary.maxIdentity.forBarplot.tsv
+			awk -v OFS="\t" '{if($2>0.9 && $2<=1){print $0,"90-100"}else if($2>0.8 && $2<=0.9){print $0,"80-90"}else if($2>0.7 && $2<=0.80){print $0,"70-80"}else if($2>0.60 && $2<=0.70){print $0,"60-70"}else if($2>0.50 && $2<=0.60){print $0,"50-60"}else{print $0,"0-50"}}' blastp_hg19refSeq.summary.maxCoverage.tsv|cut -f3|sort|uniq -c|awk '{print $2"\t"$1}'|sort -k1,1 >blastp_hg19refSeq.summary.maxCoverage.forBarplot.tsv
+			blastp -query ~/transcriptome/data/protein/rhesus.genbank.aa.fa -out genbank/blastp_rhesus -db Final.427404.coding.db -outfmt 6 -evalue 1e-5 -num_threads 10 > genbank/blastp.rhesus.log 2>genbank/blastp.rhesus.err
+			blastp -query ~/transcriptome/data/protein/rhesus.refseq.aa.fa -out refSeq/blastp_rhesus -db Final.427404.coding.db -outfmt 6 -evalue 1e-5 -num_threads 10 >refSeq/blastp.rhesus.log 2>genbank/blastp.rhesus.err
+			faSplit sequence ~/transcriptome/data/protein/human.refseq.aa.fa 10 human.refseq.aa
+			ls human.refseq0*|while read file;do
+				prefix=$(echo $file|sed 's/.fa//');
+				blastp -query $file -out refSeq/blastp_${prefix} -db Final.427404.coding.db -outfmt 6 -evalue 1e-5 -num_threads 1 >refSeq/blastp.${prefix}.log 2>refSeq/blastp.${prefix}.err &
+			done;
+			faSplit sequence ~/transcriptome/data/protein/human.genbank.aa.fa 20 human.genbank.aa
+			ls human.genbank*|while read file;do
+				prefix=$(echo $file|sed 's/.fa//');
+				blastp -query $file -out genbank/blastp_${prefix} -db Final.427404.coding.db -outfmt 6 -evalue 1e-5 -num_threads 1 >genbank/blastp.${prefix}.log 2>genbank/blastp.${prefix}.err
+			done;
+			awk -v OFS="\t" '$3>50{split($2,a,"|");print a[2],($10-$9+1)/(a[5]/3-1)}' refSeq/blastp_rhesus|sort -u|Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=refSeq/blastp_rhesus.maxCoverage.tsv
+			awk -v OFS="\t" '$3>50{split($2,a,"|");print a[2],($10-$9+1)/(a[5]/3-1)}' refSeq/blastp_human*|sort -u|Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=refSeq/blastp_human.maxCoverage.tsv
+			awk -v OFS="\t" '$3>50{split($2,a,"|");print a[2],($10-$9+1)/(a[5]/3-1)}' genbank/blastp_rhesus |sort -u|Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=genbank/blastp_rhesus.maxCoverage.tsv
+			awk -v OFS="\t" '$3>50{split($2,a,"|");print a[2],($10-$9+1)/(a[5]/3-1)}' genbank/blastp_human*|sort -u|Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=genbank/blastp_human.maxCoverage.tsv
+			cat */*maxCoverage.tsv|sort -u|Rscript ~/mnt/bin/columnMeanByFactor.R -c=2 -f=1 -s=max -o=blastp_refSeqGenbankProtein.maxCoverage.tsv
+			awk -v OFS="\t" '{if($2==1){print $0,"9"}else{print $0,int($2/0.1)}}' blastp_refSeqGenbankProtein.maxCoverage.tsv|cut -f3|sort -n|uniq -c|awk '{print $2*0.1"-"($2+1)*0.1"\t"$1}' >blastp_refSeqGenbankProtein.maxCoverage.forBarplot.tsv
 #5 PA identification and evaluation(liym@jupiter ~/transcriptome/PA)
 	##5.1 PA usage on genes in human and macaque tissues 
 		cd ~/transcriptome/PA
