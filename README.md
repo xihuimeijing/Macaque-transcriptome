@@ -20,16 +20,16 @@ Reads processing:
   
 File convert or processing:
 	
-	 geneCollaspeForRSeQC.pl: collapse all transcripts to a single transcript model for each gene based on procedures using by GTEx (https://gtexportal.org/home/documentationPage#staticTextAnalysisMethods)
-	 bed2gpe.pl: convert bed12 format file to genePred format file.
-	 sam2bed.pl: convert sam format file to bed12 format.
-	 filter.pl: filter a file based the input target file.
-	 select.pl: pick out the reference which contain the query.
-	 unique.pl: output unique result based on the values of specific column.
-	 join.pl: join two files based on sepcific columns.
-	 gpeFeature.pl: extract features from genePred format file.
-	 grep_exonfasta_from_gpe.pl: get fa format sequences for exons from genePred file.
-	 Base.faConvertProtein.fa.pl: convert nucleotides sequence fa format file to amino acid sequence fa format file.
+	geneCollaspeForRSeQC.pl: collapse all transcripts to a single transcript model for each gene based on procedures using by GTEx (https://gtexportal.org/home/documentationPage#staticTextAnalysisMethods)
+	bed2gpe.pl: convert bed12 format file to genePred format file.
+	sam2bed.pl: convert sam format file to bed12 format.
+	filter.pl: filter a file based the input target file.
+	select.pl: pick out the reference which contain the query.
+	unique.pl: output unique result based on the values of specific column.
+	join.pl: join two files based on sepcific columns.
+	gpeFeature.pl: extract features from genePred format file.
+	grep_exonfasta_from_gpe.pl: get fa format sequences for exons from genePred file.
+	Base.faConvertProtein.fa.pl: convert nucleotides sequence fa format file to amino acid sequence fa format file.
   
 Statistics for files:
 	
