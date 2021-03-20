@@ -1,14 +1,20 @@
 # Macaque-transcriptome
 This repository contains pipeline and scripts that were used to generate resutls in paper titled "Polyadenylation-Related Isoform-switching in Human Evolution Revealed by Full-length Transcript Structure".
 
+
 transcriptomeProject.sh: This file contains all the steps to analyze all the data.
+
 
 /scripts: this directory contains some useful scripts for both NGS and Iso-seq data analysis. 
 
 Data/file processing: 
+
   Reads processing:
+  
   PAratio.OnGenes.sh: find PA sites based on Iso-seq reads, assign them to genes and calculate the PA usage/ratio (PA supported reads/all reads assigned to the gene) for each gene.
+  
   dnaOrInternalPrimingContFilter.pl: remove Iso-seq reads with possible DNA or internal primer comtaminations.
+  
   separatePaReadsFromNotFL.pl: separate Iso-seq reads with poly(A) tails from those non-full-length ones.
   fqTrimPA.pl: trim the poly(A) tail from Iso-seq reads.
   paCluster_revision.pl: output PA clusters based on Iso-seq reads in bed12 format.
