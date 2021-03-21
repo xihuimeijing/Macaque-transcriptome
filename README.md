@@ -1,4 +1,4 @@
-# Macaque-transcriptome
+# The definition of macaque full-length gene models
 This repository contains pipeline and scripts that were used to generate resutls in paper titled "Polyadenylation-Related Isoform-switching in Human Evolution Revealed by Full-length Transcript Structure".
 
 
