@@ -1,5 +1,6 @@
 # The definition of macaque full-length gene models
 This repository contains pipeline and scripts that were used to generate resutls in paper: 
+
 Yumei Li, Qing Sunny Shen, Qi Peng, Wanqiu Ding, Jie Zhang, Xiaoming Zhong, Ni A An, Mingjun Ji, Wei-Zhen Zhou, Chuan-Yun Li, Polyadenylation-related isoform switching in human evolution revealed by full-length transcript structure, Briefings in Bioinformatics, 2021;, bbab157, https://doi.org/10.1093/bib/bbab157
 
 
